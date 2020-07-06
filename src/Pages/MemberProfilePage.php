@@ -3,6 +3,7 @@
 namespace Symbiote\MemberProfiles\Pages;
 
 use Page;
+use SilverStripe\Forms\FieldList;
 use Symbiote\MemberProfiles\Forms\MemberProfilesAddSectionAction;
 use Symbiote\MemberProfiles\Email\MemberConfirmationEmail;
 use Symbiote\MemberProfiles\Model\MemberProfileFieldsSection;
@@ -191,152 +192,152 @@ class MemberProfilePage extends Page
 
     public function getCMSFields()
     {
-        $fields = parent::getCMSFields();
+        $this->beforeUpdateCMSFields(function (FieldList $fields) {
+            $fields->addFieldToTab('Root', new TabSet('Profile', _t('MemberProfiles.PROFILE', 'Profile')));
+            $fields->addFieldToTab('Root', new Tab('ContentBlocks', _t('MemberProfiles.CONTENTBLOCKS', 'Content Blocks')));
+            $fields->addFieldToTab('Root', new Tab('Email', _t('MemberProfiles.Email', 'Email')));
+            $fields->fieldByName('Root.Main')->setTitle(_t('MemberProfiles.MAIN', 'Main'));
 
-        $fields->addFieldToTab('Root', new TabSet('Profile', _t('MemberProfiles.PROFILE', 'Profile')));
-        $fields->addFieldToTab('Root', new Tab('ContentBlocks', _t('MemberProfiles.CONTENTBLOCKS', 'Content Blocks')));
-        $fields->addFieldToTab('Root', new Tab('Email', _t('MemberProfiles.Email', 'Email')));
-        $fields->fieldByName('Root.Main')->setTitle(_t('MemberProfiles.MAIN', 'Main'));
-
-        $fields->addFieldsToTab('Root.Profile', array(
-            new Tab(
-                'Fields',
-                _t('MemberProfiles.FIELDS', 'Fields'),
-                new GridField(
+            $fields->addFieldsToTab('Root.Profile', array(
+                new Tab(
                     'Fields',
-                    _t('MemberProfiles.PROFILEFIELDS', 'Profile Fields'),
-                    $this->Fields(),
-                    $grid = GridFieldConfig_RecordEditor::create()
-                        ->removeComponentsByType(GridFieldDeleteAction::class)
-                        ->removeComponentsByType(GridFieldAddNewButton::class)
-                )
-            ),
-            new Tab(
-                'Groups',
-                _t('MemberProfiles.GROUPS', 'Groups'),
-                $groups = new TreeMultiselectField(
+                    _t('MemberProfiles.FIELDS', 'Fields'),
+                    new GridField(
+                        'Fields',
+                        _t('MemberProfiles.PROFILEFIELDS', 'Profile Fields'),
+                        $this->Fields(),
+                        $grid = GridFieldConfig_RecordEditor::create()
+                            ->removeComponentsByType(GridFieldDeleteAction::class)
+                            ->removeComponentsByType(GridFieldAddNewButton::class)
+                    )
+                ),
+                new Tab(
                     'Groups',
                     _t('MemberProfiles.GROUPS', 'Groups'),
-                    Group::class
+                    $groups = new TreeMultiselectField(
+                        'Groups',
+                        _t('MemberProfiles.GROUPS', 'Groups'),
+                        Group::class
+                    ),
+                    $selectable = new TreeMultiselectField(
+                        'SelectableGroups',
+                        _t('MemberProfiles.SELECTABLEGROUPS', 'Selectable Groups'),
+                        Group::class
+                    )
                 ),
-                $selectable = new TreeMultiselectField(
-                    'SelectableGroups',
-                    _t('MemberProfiles.SELECTABLEGROUPS', 'Selectable Groups'),
-                    Group::class
-                )
-            ),
-            new Tab(
-                'PublicProfile',
-                _t('MemberProfiles.PUBLICPROFILE', 'Public Profile'),
-                new GridField(
-                    'Sections',
-                    _t('MemberProfiles.PROFILESECTIONS', 'Profile Sections'),
-                    $this->Sections(),
-                    GridFieldConfig_RecordEditor::create()
-                        ->removeComponentsByType(GridFieldAddNewButton::class)
-                        ->addComponent(new MemberProfilesAddSectionAction())
-                )
-            )
-        ));
-
-        /* @var GridFieldDataColumns $dataColumns */
-        $dataColumns = $grid->getComponentByType(GridFieldDataColumns::class);
-        if (method_exists($dataColumns, 'setFieldFormatting')) {
-            $dataColumns->setFieldFormatting(array(
-                'Unique'   => function ($val, $obj) {
-                    return $obj->dbObject('Unique')->Nice();
-                },
-                'Required' => function ($val, $obj) {
-                    return $obj->dbObject('Required')->Nice();
-                }
-            ));
-        }
-
-        if (class_exists(GridFieldOrderableRows::class)) {
-            $grid->addComponent(GridFieldOrderableRows::create('Sort'));
-        } elseif (class_exists(GridFieldSortableRows::class)) {
-            $grid->addComponent(new GridFieldSortableRows('Sort'));
-        }
-
-
-        if (!$this->AllowProfileViewing) {
-            $disabledNote = LiteralField::create('PublisProfileDisabledNote', sprintf(
-                '<p class="message notice">%s</p>',
-                _t(
-                    'MemberProfiles.PUBLICPROFILEDISABLED',
-                    'Public profiles are currently disabled, you can enable them ' .
-                    'in the "Settings" tab.'
+                new Tab(
+                    'PublicProfile',
+                    _t('MemberProfiles.PUBLICPROFILE', 'Public Profile'),
+                    new GridField(
+                        'Sections',
+                        _t('MemberProfiles.PROFILESECTIONS', 'Profile Sections'),
+                        $this->Sections(),
+                        GridFieldConfig_RecordEditor::create()
+                            ->removeComponentsByType(GridFieldAddNewButton::class)
+                            ->addComponent(new MemberProfilesAddSectionAction())
+                    )
                 )
             ));
-            $fields->insertBefore($disabledNote, 'Sections');
-        }
 
-        $groups->setDescription(_t(
-            'MemberProfiles.GROUPSNOTE',
-            'Any users registering via this page will always be added to ' .
-            'these groups (if registration is enabled). Conversely, a member ' .
-            'must belong to these groups in order to edit their profile on ' .
-            'this page.'
-        ));
+            /* @var GridFieldDataColumns $dataColumns */
+            $dataColumns = $grid->getComponentByType(GridFieldDataColumns::class);
+            if (method_exists($dataColumns, 'setFieldFormatting')) {
+                $dataColumns->setFieldFormatting(array(
+                    'Unique'   => function ($val, $obj) {
+                        return $obj->dbObject('Unique')->Nice();
+                    },
+                    'Required' => function ($val, $obj) {
+                        return $obj->dbObject('Required')->Nice();
+                    }
+                ));
+            }
 
-        $selectable->setDescription(_t(
-            'MemberProfiles.SELECTABLENOTE',
-            'Users can choose to belong to these groups, if the  "Groups" field ' .
-            'is enabled in the "Fields" tab.'
-        ));
+            if (class_exists(GridFieldOrderableRows::class)) {
+                $grid->addComponent(GridFieldOrderableRows::create('Sort'));
+            } elseif (class_exists(GridFieldSortableRows::class)) {
+                $grid->addComponent(new GridFieldSortableRows('Sort'));
+            }
 
-        $fields->removeByName('Content', true);
 
-        $contentFields = array();
-        if ($this->AllowRegistration) {
-            $contentFields[] = 'Registration';
-            $contentFields[] = 'AfterRegistration';
-        }
+            if (!$this->AllowProfileViewing) {
+                $disabledNote = LiteralField::create('PublisProfileDisabledNote', sprintf(
+                    '<p class="message notice">%s</p>',
+                    _t(
+                        'MemberProfiles.PUBLICPROFILEDISABLED',
+                        'Public profiles are currently disabled, you can enable them ' .
+                        'in the "Settings" tab.'
+                    )
+                ));
+                $fields->insertBefore($disabledNote, 'Sections');
+            }
 
-        if ($this->AllowProfileEditing) {
-            $contentFields[] = 'Profile';
-        }
-
-        foreach ($contentFields as $type) {
-            $fields->addFieldToTab("Root.ContentBlocks", ToggleCompositeField::create(
-                "{$type}Toggle",
-                _t('MemberProfiles.'.  strtoupper($type), FormField::name_to_label($type)),
-                array(
-                    TextField::create("{$type}Title", _t('MemberProfiles.TITLE', 'Title')),
-                    $content = HtmlEditorField::create("{$type}Content", _t('MemberProfiles.CONTENT', 'Content'))
-                )
+            $groups->setDescription(_t(
+                'MemberProfiles.GROUPSNOTE',
+                'Any users registering via this page will always be added to ' .
+                'these groups (if registration is enabled). Conversely, a member ' .
+                'must belong to these groups in order to edit their profile on ' .
+                'this page.'
             ));
-            $content->setRows(15);
-        }
+
+            $selectable->setDescription(_t(
+                'MemberProfiles.SELECTABLENOTE',
+                'Users can choose to belong to these groups, if the  "Groups" field ' .
+                'is enabled in the "Fields" tab.'
+            ));
+
+            $fields->removeByName('Content', true);
+
+            $contentFields = array();
+            if ($this->AllowRegistration) {
+                $contentFields[] = 'Registration';
+                $contentFields[] = 'AfterRegistration';
+            }
+
+            if ($this->AllowProfileEditing) {
+                $contentFields[] = 'Profile';
+            }
+
+            foreach ($contentFields as $type) {
+                $fields->addFieldToTab("Root.ContentBlocks", ToggleCompositeField::create(
+                    "{$type}Toggle",
+                    _t('MemberProfiles.'.  strtoupper($type), FormField::name_to_label($type)),
+                    array(
+                        TextField::create("{$type}Title", _t('MemberProfiles.TITLE', 'Title')),
+                        $content = HtmlEditorField::create("{$type}Content", _t('MemberProfiles.CONTENT', 'Content'))
+                    )
+                ));
+                $content->setRows(15);
+            }
 
 
-        $fields->addFieldsToTab('Root.Email', array(
-            OptionsetField::create(
-                'EmailType',
-                _t('MemberProfiles.EMAILSETTINGS', 'Email Settings'),
-                array(
-                    'Validation'   => _t('MemberProfiles.EMAILVALIDATION', 'Send a confirmation email (confirmation required to login)'),
-                    'Confirmation' => _t('MemberProfiles.EMAILCONFIRMATION', 'Send a confirmation email (confirmation NOT required to login)'),
-                    'None'         => _t('MemberProfiles.NONE', 'None')
-                )
-            )->setRightTitle('For additional settings, check the "Settings" tab.'),
-            ToggleCompositeField::create('EmailContentToggle', _t('MemberProfiles.EMAILCONTENT', 'Email Content'), array(
-                TextField::create('EmailSubject', _t('MemberProfiles.EMAILSUBJECT', 'Email subject')),
-                TextField::create('EmailFrom', _t('MemberProfiles.EMAILFROM', 'Email from')),
-                TextareaField::create('EmailTemplate', _t('MemberProfiles.EMAILTEMPLATE', 'Email template')),
-                LiteralField::create('TemplateNote', sprintf(
-                    '<div class="field">%s</div>',
-                    MemberConfirmationEmail::TEMPLATE_NOTE
+            $fields->addFieldsToTab('Root.Email', array(
+                OptionsetField::create(
+                    'EmailType',
+                    _t('MemberProfiles.EMAILSETTINGS', 'Email Settings'),
+                    array(
+                        'Validation'   => _t('MemberProfiles.EMAILVALIDATION', 'Send a confirmation email (confirmation required to login)'),
+                        'Confirmation' => _t('MemberProfiles.EMAILCONFIRMATION', 'Send a confirmation email (confirmation NOT required to login)'),
+                        'None'         => _t('MemberProfiles.NONE', 'None')
+                    )
+                )->setRightTitle('For additional settings, check the "Settings" tab.'),
+                ToggleCompositeField::create('EmailContentToggle', _t('MemberProfiles.EMAILCONTENT', 'Email Content'), array(
+                    TextField::create('EmailSubject', _t('MemberProfiles.EMAILSUBJECT', 'Email subject')),
+                    TextField::create('EmailFrom', _t('MemberProfiles.EMAILFROM', 'Email from')),
+                    TextareaField::create('EmailTemplate', _t('MemberProfiles.EMAILTEMPLATE', 'Email template')),
+                    LiteralField::create('TemplateNote', sprintf(
+                        '<div class="field">%s</div>',
+                        MemberConfirmationEmail::TEMPLATE_NOTE
+                    ))
+                )),
+                ToggleCompositeField::create('ConfirmationContentToggle', _t('MemberProfiles.CONFIRMCONTENT', 'Confirmation Content'), array(
+                    TextField::create('ConfirmationTitle', _t('MemberProfiles.TITLE', 'Title')),
+                    $confContent  = HtmlEditorField::create('ConfirmationContent', _t('MemberProfiles.CONTENT', 'Content'))
                 ))
-            )),
-            ToggleCompositeField::create('ConfirmationContentToggle', _t('MemberProfiles.CONFIRMCONTENT', 'Confirmation Content'), array(
-                TextField::create('ConfirmationTitle', _t('MemberProfiles.TITLE', 'Title')),
-                $confContent  = HtmlEditorField::create('ConfirmationContent', _t('MemberProfiles.CONTENT', 'Content'))
-            ))
-        ));
-        $confContent->setRows(15);
+            ));
+            $confContent->setRows(15);
+        });
 
-        return $fields;
+        return parent::getCMSFields();
     }
 
     public function getSettingsFields()
